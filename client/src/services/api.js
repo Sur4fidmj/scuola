@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: 'http://localhost:5000/api'
+    baseURL: 'https://scuola-backend.onrender.com/api'
 });
 
 // Add a request interceptor to inject the token
@@ -28,3 +28,4 @@ api.interceptors.response.use(
 );
 
 export default api;
+
