@@ -131,7 +131,7 @@ const Appunti = () => {
                                     <button onClick={() => handleOpenPreview(item)} className="btn-icon preview">
                                         <Eye size={18} /> Anteprima
                                     </button>
-                                    <a target="_blank" href={`http://localhost:5000/uploads/${item.file_path}`} className="btn-icon download" rel="noreferrer">
+                                    <a target="_blank" href={`https://king-hosting.it/uploads/${item.file_path}`} className="btn-icon download" rel="noreferrer">
                                         <Download size={18} /> Scarica
                                     </a>
                                     {(user.ruolo === 'admin' || user.id === item.autore_id) && (
@@ -159,7 +159,7 @@ const Appunti = () => {
                                 <h2>{selectedItem.titolo}</h2>
                                 <div className="iframe-wrapper">
                                     <iframe
-                                        src={`http://localhost:5000/uploads/${selectedItem.file_path}`}
+                                        src={`https://king-hosting.it/uploads/${selectedItem.file_path}`}
                                         title="Document Preview"
                                         frameBorder="0"
                                     ></iframe>
@@ -204,3 +204,4 @@ const Appunti = () => {
 };
 
 export default Appunti;
+
