@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const FormData = require('form-data');
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'https://scuola-backend.onrender.com/api';
 
 // Utilities
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -110,3 +110,4 @@ async function runTest() {
 }
 
 runTest();
+
