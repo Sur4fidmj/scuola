@@ -1,127 +1,98 @@
-const sqlite3 = require('sqlite3').verbose();
-const bcrypt = require('bcrypt');
-const path = require('path');
+const { Pool } = require('pg');
+require('dotenv').config();
 
-const dbPath = path.resolve(__dirname, 'database.sqlite');
-const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-        console.error('Error opening database', err.message);
-    } else {
-        console.log('Connected to the SQLite database.');
+// PostgreSQL connection string from Neon
+const DATABASE_URL = process.env.DATABASE_URL;
+
+if (!DATABASE_URL) {
+    console.error('DATABASE_URL is not defined in .env! Connection to Neon will fail.');
+}
+
+const pool = new Pool({
+    connectionString: DATABASE_URL,
+    ssl: {
+        rejectUnauthorized: false // Required for Neon and many hosted PG instances
     }
 });
 
-const INITAL_CATEGORIES = [
-    'Sistemi e Reti',
-    'Italiano',
-    'Informatica',
-    'Matematica',
-    'Cyber Security'
-];
-
-// Initial Admin
-const ADMIN_USER = {
-    nome: 'Admin',
-    cognome: 'System',
-    email: 'admin@school.test',
-    password: 'password123', // Will be hashed
-    ruolo: 'admin'
+const db = {
+    // Wrapper to keep similar interface if needed, but we'll use async/await query
+    query: (text, params) => pool.query(text, params),
+    all: async (text, params) => {
+        const res = await pool.query(text, params);
+        return res.rows;
+    },
+    get: async (text, params) => {
+        const res = await pool.query(text, params);
+        return res.rows[0];
+    },
+    run: (text, params) => pool.query(text, params)
 };
 
 const initDb = async () => {
-    db.serialize(() => {
+    try {
         // Users Table
-        db.run(`CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+        await db.query(`CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
             nome TEXT NOT NULL,
             cognome TEXT NOT NULL,
             email TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
-            ruolo TEXT CHECK(ruolo IN ('admin','professore','studente')) NOT NULL,
-            is_verified BOOLEAN DEFAULT 0,
+            ruolo VARCHAR(20) CHECK(ruolo IN ('admin','professore','studente')) NOT NULL,
+            is_verified BOOLEAN DEFAULT FALSE,
             verification_token TEXT,
             two_fa_secret TEXT,
-            two_fa_enabled BOOLEAN DEFAULT 0,
-            data_creazione DATETIME DEFAULT CURRENT_TIMESTAMP
+            two_fa_enabled BOOLEAN DEFAULT FALSE,
+            data_creazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`);
 
         // Categories Table
-        db.run(`CREATE TABLE IF NOT EXISTS categorie (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+        await db.query(`CREATE TABLE IF NOT EXISTS categorie (
+            id SERIAL PRIMARY KEY,
             nome TEXT NOT NULL UNIQUE
         )`);
 
         // Appunti Table
-        db.run(`CREATE TABLE IF NOT EXISTS appunti (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+        await db.query(`CREATE TABLE IF NOT EXISTS appunti (
+            id SERIAL PRIMARY KEY,
             titolo TEXT NOT NULL,
             descrizione TEXT,
             file_path TEXT, 
-            categoria_id INTEGER,
-            autore_id INTEGER,
-            data_pubblicazione DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (categoria_id) REFERENCES categorie(id),
-            FOREIGN KEY (autore_id) REFERENCES users(id)
+            categoria_id INTEGER REFERENCES categorie(id),
+            autore_id INTEGER REFERENCES users(id),
+            data_pubblicazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`);
 
         // Valutazioni Table
-        db.run(`CREATE TABLE IF NOT EXISTS valutazioni_studenti (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            studente_id INTEGER NOT NULL,
-            professore_id INTEGER NOT NULL,
+        await db.query(`CREATE TABLE IF NOT EXISTS valutazioni_studenti (
+            id SERIAL PRIMARY KEY,
+            studente_id INTEGER NOT NULL REFERENCES users(id),
+            professore_id INTEGER NOT NULL REFERENCES users(id),
             qualita INTEGER,
             interessi INTEGER,
             interesse_lavoro INTEGER,
             tipo_lavoro TEXT,
             note TEXT,
-            data_valutazione DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (studente_id) REFERENCES users(id),
-            FOREIGN KEY (professore_id) REFERENCES users(id)
+            data_valutazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`);
 
         // Commenti Table
-        db.run(`CREATE TABLE IF NOT EXISTS commenti (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            appunto_id INTEGER NOT NULL,
-            utente_id INTEGER NOT NULL,
+        await db.query(`CREATE TABLE IF NOT EXISTS commenti (
+            id SERIAL PRIMARY KEY,
+            appunto_id INTEGER NOT NULL REFERENCES appunti(id) ON DELETE CASCADE,
+            utente_id INTEGER NOT NULL REFERENCES users(id),
             testo TEXT NOT NULL,
-            data_creazione DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (appunto_id) REFERENCES appunti(id) ON DELETE CASCADE,
-            FOREIGN KEY (utente_id) REFERENCES users(id)
+            data_creazione TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`);
 
-        // Seed Categories
-        INITAL_CATEGORIES.forEach(cat => {
-            db.run(`INSERT OR IGNORE INTO categorie (nome) VALUES (?)`, [cat], (err) => {
-                if (err) console.error(`Error seeding category ${cat}:`, err.message);
-            });
-        });
-
-        // Seed Admin (Async hash)
-        // We use a simple callback approach for seeding to keep it simple in this file
-        bcrypt.hash(ADMIN_USER.password, 10, (err, hash) => {
-            if (err) {
-                console.error("Error hashing password", err);
-                return;
-            }
-            db.run(`INSERT OR IGNORE INTO users (nome, cognome, email, password_hash, ruolo) VALUES (?, ?, ?, ?, ?)`,
-                [ADMIN_USER.nome, ADMIN_USER.cognome, ADMIN_USER.email, hash, ADMIN_USER.ruolo],
-                (err) => {
-                    if (err) {
-                        // Ignore if exists
-                    } else {
-                        console.log("Admin user created.");
-                    }
-                }
-            );
-        });
-
-    });
+        console.log("Neon (PostgreSQL) tables verified/created.");
+    } catch (err) {
+        console.error("Error initializing Postgres database:", err);
+    }
 };
 
-module.exports = { db, initDb };
+module.exports = { db, pool, initDb };
 
-// If run directly, initialize
 if (require.main === module) {
     initDb();
 }
