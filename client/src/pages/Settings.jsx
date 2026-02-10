@@ -129,7 +129,23 @@ const Settings = () => {
                                 {user.is_verified ? (
                                     <span className="verified"><CheckCircle size={14} /> Email Verificata</span>
                                 ) : (
-                                    <span className="unverified"><Mail size={14} /> Email non verificata</span>
+                                    <>
+                                        <span className="unverified"><Mail size={14} /> Email non verificata</span>
+                                        <button
+                                            type="button"
+                                            className="btn-secondary-sm"
+                                            onClick={async () => {
+                                                try {
+                                                    await api.post('/auth/resend-verification');
+                                                    setMessage({ type: 'success', text: 'Email di verifica inviata! Controlla la tua casella.' });
+                                                } catch (err) {
+                                                    setMessage({ type: 'error', text: err.response?.data?.message || 'Errore invio email.' });
+                                                }
+                                            }}
+                                        >
+                                            Invia Email di Verifica
+                                        </button>
+                                    </>
                                 )}
                             </div>
                             <div className="input-group">
