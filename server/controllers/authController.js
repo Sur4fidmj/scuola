@@ -110,8 +110,8 @@ const changePassword = async (req, res) => {
         sendPasswordChangeNotification(user.email).catch(console.error);
         res.json({ message: 'Password changed successfully' });
     } catch (err) {
-        res.status(500).json({ message: 'Database error', error: err.message });
+        res.status(500).json({ message: 'Error verifying email', error: err.message });
     }
 };
 
-module.exports = { register, login, getMe, verifyEmail, changePassword };
+const resendVerificationEmail = async (req, res) => {
