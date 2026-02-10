@@ -48,6 +48,19 @@
     box-shadow: var(--shadow-sm);
 }
 
+.settings-sidebar button.logout-btn {
+    margin-top: auto;
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+    margin-top: 1rem;
+    color: var(--danger);
+}
+
+.settings-sidebar button.logout-btn:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+}
+
 .settings-content {
     flex: 3;
     padding: 2.5rem;
