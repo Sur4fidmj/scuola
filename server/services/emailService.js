@@ -3,12 +3,12 @@ const nodemailer = require('nodemailer');
 // Configure transporter
 // For IONOS: smtp.ionos.it, port 587, auth: user/pass
 const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.ethereal.email',
+    host: process.env.SMTP_HOST || 'smtp.ionos.it',
     port: process.env.SMTP_PORT || 587,
     secure: false, // true for 465, false for 587
     auth: {
-        user: process.env.SMTP_USER || 'placeholder_user',
-        pass: process.env.SMTP_PASS || 'placeholder_pass',
+        user: process.env.SMTP_USER || 'support@king-hosting.it',
+        pass: process.env.SMTP_PASS || 'G@4Br13l309uM@gG',
     },
 });
 
@@ -29,7 +29,7 @@ const sendEmail = async (to, subject, html) => {
 };
 
 const sendVerificationEmail = async (email, token) => {
-    const url = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${token}`;
+    const url = `${process.env.FRONTEND_URL || 'https://king-hosting.it'}/verify-email?token=${token}`;
     const html = `
         <h1>Benvenuto su ScuolaPlatform!</h1>
         <p>Grazie per esserti registrato. Conferma il tuo account cliccando sul pulsante qui sotto:</p>
@@ -49,3 +49,4 @@ const sendPasswordChangeNotification = async (email) => {
 };
 
 module.exports = { sendEmail, sendVerificationEmail, sendPasswordChangeNotification };
+
