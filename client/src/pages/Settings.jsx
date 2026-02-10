@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import api from '../services/api';
-import { User, Lock, ShieldCheck, Mail, CheckCircle, XCircle, QrCode } from 'lucide-react';
+import { User, Lock, ShieldCheck, Mail, CheckCircle, XCircle, QrCode, LogOut } from 'lucide-react';
 import '../styles/Settings.css';
 
 const Settings = () => {
@@ -91,6 +91,11 @@ const Settings = () => {
         }
     };
 
+    const handleLogout = () => {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+    };
+
     return (
         <div className="settings-page">
             <div className="settings-container glass-card">
@@ -103,6 +108,9 @@ const Settings = () => {
                     </button>
                     <button className={activeTab === 'password' ? 'active' : ''} onClick={() => setActiveTab('password')}>
                         <Lock size={20} /> Password
+                    </button>
+                    <button className="logout-btn" onClick={handleLogout}>
+                        <LogOut size={20} /> Esci
                     </button>
                 </div>
 
