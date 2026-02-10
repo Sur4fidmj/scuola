@@ -25,9 +25,10 @@ const register = async (req, res) => {
         const userId = result.rows[0].id;
 
         // Send verification email (async)
-        sendVerificationEmail(email, verificationToken).catch(console.error);
+        const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
+        sendVerificationEmail(email, verificationLink).catch(console.error);
 
-        res.status(201).json({ message: 'User registered successfully. check your email for verification.', userId });
+        res.status(201).json({ message: 'User registered successfully. Check your email for verification.', userId });
     } catch (err) {
         if (err.code === '23505') { // Postgres unique violation
             return res.status(400).json({ message: 'Email already exists' });
@@ -110,8 +111,36 @@ const changePassword = async (req, res) => {
         sendPasswordChangeNotification(user.email).catch(console.error);
         res.json({ message: 'Password changed successfully' });
     } catch (err) {
-        res.status(500).json({ message: 'Error verifying email', error: err.message });
+        res.status(500).json({ message: 'Database error', error: err.message });
     }
 };
 
 const resendVerificationEmail = async (req, res) => {
+    try {
+        const user = await db.get(`SELECT * FROM users WHERE id = $1`, [req.userId]);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (user.is_verified) {
+            return res.status(400).json({ message: 'Email already verified' });
+        }
+
+        const token = user.verification_token || crypto.randomBytes(32).toString('hex');
+
+        // Update token if it was null
+        if (!user.verification_token) {
+            await db.query(`UPDATE users SET verification_token = $1 WHERE id = $2`, [token, req.userId]);
+        }
+
+        const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
+        await sendVerificationEmail(user.email, verificationLink);
+
+        res.json({ message: 'Verification email sent' });
+    } catch (err) {
+        res.status(500).json({ message: 'Error sending verification email', error: err.message });
+    }
+};
+
+module.exports = { register, login, getMe, verifyEmail, changePassword, resendVerificationEmail };
