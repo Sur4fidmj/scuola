@@ -34,4 +34,23 @@ const addCommento = (req, res) => {
     });
 };
 
-module.exports = { getCommentiByAppunto, addCommento };
+const deleteCommento = (req, res) => {
+    const { commentId } = req.params;
+
+    const checkSql = `SELECT * FROM commenti WHERE id = ?`;
+    db.get(checkSql, [commentId], (err, row) => {
+        if (err) return res.status(500).json({ message: 'Database error' });
+        if (!row) return res.status(404).json({ message: 'Comment not found' });
+
+        if (req.userRole !== 'admin' && row.utente_id !== req.userId) {
+            return res.status(403).json({ message: 'You can only delete your own comments' });
+        }
+
+        db.run(`DELETE FROM commenti WHERE id = ?`, [commentId], function (err) {
+            if (err) return res.status(500).json({ message: 'Database error' });
+            res.json({ message: 'Commento deleted' });
+        });
+    });
+};
+
+module.exports = { getCommentiByAppunto, addCommento, deleteCommento };

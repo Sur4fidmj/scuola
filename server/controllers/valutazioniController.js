@@ -45,32 +45,45 @@ const updateValutazione = (req, res) => {
     const { id } = req.params;
     const { qualita, interessi, interesse_lavoro, tipo_lavoro, note } = req.body;
 
-    const sql = `UPDATE valutazioni_studenti 
-                 SET qualita = ?, interessi = ?, interesse_lavoro = ?, tipo_lavoro = ?, note = ?
-                 WHERE id = ?`;
+    const checkSql = `SELECT * FROM valutazioni_studenti WHERE id = ?`;
+    db.get(checkSql, [id], (err, row) => {
+        if (err) return res.status(500).json({ message: 'Database error' });
+        if (!row) return res.status(404).json({ message: 'Valutazione not found' });
+        
+        if (req.userRole !== 'admin' && row.professore_id !== req.userId) {
+            return res.status(403).json({ message: 'You can only edit your own evaluations' });
+        }
 
-    db.run(sql, [qualita, interessi, interesse_lavoro, tipo_lavoro, note, parseInt(id)], function (err) {
-        console.log(`[BACKEND] Updating Valutazione ${id}`, { qualita, interessi, interesse_lavoro, tipo_lavoro });
-        if (err) {
-            console.error('[BACKEND] Update Error:', err.message);
-            return res.status(500).json({ message: 'Database error', error: err.message });
-        }
-        console.log(`[BACKEND] Changes made: ${this.changes}`);
-        if (this.changes === 0) {
-            console.warn(`[BACKEND] No evaluation found with ID ${id}`);
-            return res.status(404).json({ message: 'Valutazione not found' });
-        }
-        res.json({ message: 'Valutazione updated' });
+        const sql = `UPDATE valutazioni_studenti 
+                     SET qualita = ?, interessi = ?, interesse_lavoro = ?, tipo_lavoro = ?, note = ?
+                     WHERE id = ?`;
+
+        db.run(sql, [qualita, interessi, interesse_lavoro, tipo_lavoro, note, parseInt(id)], function (err) {
+            if (err) {
+                console.error('[BACKEND] Update Error:', err.message);
+                return res.status(500).json({ message: 'Database error', error: err.message });
+            }
+            res.json({ message: 'Valutazione updated' });
+        });
     });
 };
 
 const deleteValutazione = (req, res) => {
     const { id } = req.params;
 
-    db.run(`DELETE FROM valutazioni_studenti WHERE id = ?`, [id], function (err) {
+    const checkSql = `SELECT * FROM valutazioni_studenti WHERE id = ?`;
+    db.get(checkSql, [id], (err, row) => {
         if (err) return res.status(500).json({ message: 'Database error' });
-        if (this.changes === 0) return res.status(404).json({ message: 'Valutazione not found' });
-        res.json({ message: 'Valutazione deleted' });
+        if (!row) return res.status(404).json({ message: 'Valutazione not found' });
+        
+        if (req.userRole !== 'admin' && row.professore_id !== req.userId) {
+            return res.status(403).json({ message: 'You can only delete your own evaluations' });
+        }
+
+        db.run(`DELETE FROM valutazioni_studenti WHERE id = ?`, [id], function (err) {
+            if (err) return res.status(500).json({ message: 'Database error' });
+            res.json({ message: 'Valutazione deleted' });
+        });
     });
 };
 

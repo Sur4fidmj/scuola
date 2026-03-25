@@ -6,7 +6,7 @@ const checkRole = require('../middleware/roleMiddleware');
 
 router.get('/users', verifyToken, checkRole(['admin', 'professore']), getAllUsers);
 router.put('/users/:id/role', verifyToken, checkRole(['admin']), updateUserRole);
-router.put('/users/:id/profile', verifyToken, checkRole(['admin', 'professore']), updateUserProfile);
+router.put('/users/:id/profile', verifyToken, updateUserProfile);
 router.delete('/users/:id', verifyToken, checkRole(['admin']), deleteUser);
 
 module.exports = router;

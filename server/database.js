@@ -15,18 +15,50 @@ const pool = new Pool({
     }
 });
 
+const convertQuery = (text) => {
+    if (!text.includes('?')) return text;
+    let index = 1;
+    return text.replace(/\?/g, () => `$${index++}`);
+};
+
 const db = {
-    // Wrapper to keep similar interface if needed, but we'll use async/await query
-    query: (text, params) => pool.query(text, params),
-    all: async (text, params) => {
-        const res = await pool.query(text, params);
-        return res.rows;
+    query: (text, params) => pool.query(convertQuery(text), params),
+    all: (text, params, callback) => {
+        const q = convertQuery(text);
+        if (typeof callback === 'function') {
+            pool.query(q, params)
+                .then(res => callback(null, res.rows))
+                .catch(err => callback(err, null));
+        } else {
+            return pool.query(q, params).then(res => res.rows);
+        }
     },
-    get: async (text, params) => {
-        const res = await pool.query(text, params);
-        return res.rows[0];
+    get: (text, params, callback) => {
+        const q = convertQuery(text);
+        if (typeof callback === 'function') {
+            pool.query(q, params)
+                .then(res => callback(null, res.rows[0] || null))
+                .catch(err => callback(err, null));
+        } else {
+            return pool.query(q, params).then(res => res.rows[0] || null);
+        }
     },
-    run: (text, params) => pool.query(text, params)
+    run: function(text, params, callback) {
+        let q = convertQuery(text);
+        if (q.trim().toUpperCase().startsWith('INSERT') && !q.toUpperCase().includes('RETURNING')) {
+            q += ' RETURNING id';
+        }
+        if (typeof callback === 'function') {
+            pool.query(q, params)
+                .then(res => {
+                    const ctx = { lastID: res.rows && res.rows.length ? res.rows[0].id : this.lastID };
+                    callback.call(ctx, null);
+                })
+                .catch(err => callback.call(this, err));
+        } else {
+            return pool.query(q, params);
+        }
+    }
 };
 
 const initDb = async () => {

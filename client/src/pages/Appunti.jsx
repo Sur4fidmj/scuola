@@ -89,6 +89,16 @@ const Appunti = () => {
         }
     };
 
+    const handleDeleteComment = async (commentId) => {
+        if (!window.confirm('Vuoi eliminare questo commento?')) return;
+        try {
+            await api.delete(`/appunti/${selectedItem.id}/comments/${commentId}`);
+            setComments(comments.filter(c => c.id !== commentId));
+        } catch (err) {
+            alert('Errore durante l\'eliminazione del commento');
+        }
+    };
+
     return (
         <>
             <Navbar />
@@ -174,9 +184,16 @@ const Appunti = () => {
                                         <p>Caricamento commenti...</p>
                                     ) : comments.map(c => (
                                         <div key={c.id} className="comment-item">
-                                            <div className="comment-header">
-                                                <strong>{c.nome} {c.cognome}</strong>
-                                                <span className={`role-badge ${c.ruolo}`}>{c.ruolo}</span>
+                                            <div className="comment-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <div>
+                                                    <strong>{c.nome} {c.cognome}</strong>
+                                                    <span className={`role-badge ${c.ruolo}`}>{c.ruolo}</span>
+                                                </div>
+                                                {(user.ruolo === 'admin' || user.id === c.utente_id) && (
+                                                    <button onClick={() => handleDeleteComment(c.id)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer' }}>
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                )}
                                             </div>
                                             <p>{c.testo}</p>
                                             <span className="comment-date">{new Date(c.data_creazione).toLocaleString()}</span>

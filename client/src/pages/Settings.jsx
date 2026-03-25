@@ -164,6 +164,20 @@ const Settings = () => {
                         </form>
                     )}
 
+                    {activeTab === 'profile' && (
+                        <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '1px solid var(--border)' }}>
+                            <h3 style={{ color: 'var(--danger)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <LogOut size={20} /> Disconnessione
+                            </h3>
+                            <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+                                Termina la sessione corrente su questo dispositivo.
+                            </p>
+                            <button className="btn-danger-outline" onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                Esci dall'account
+                            </button>
+                        </div>
+                    )}
+
                     {activeTab === 'password' && (
                         <form onSubmit={handleChangePassword}>
                             <h2>Cambia Password</h2>
