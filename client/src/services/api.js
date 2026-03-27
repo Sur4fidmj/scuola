@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: 'https://scuola-backend.onrender.com/api'
+    baseURL: import.meta.env.VITE_API_URL || 'https://scuola-backend.onrender.com/api'
 });
 
 // Add a request interceptor to inject the token

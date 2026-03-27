@@ -16,8 +16,8 @@ const createAppunto = (req, res) => {
     const sql = `INSERT INTO appunti (titolo, descrizione, file_path, categoria_id, autore_id) VALUES (?, ?, ?, ?, ?)`;
     db.run(sql, [titolo, descrizione, file.filename, parseInt(categoria_id), req.userId], function (err) {
         if (err) {
-            console.error('[BACKEND] Appunti DB Error:', err.message);
-            return res.status(500).json({ message: 'Database error', error: err.message });
+            console.error('[BACKEND ERROR] createAppunto:', err);
+            return res.status(500).json({ message: 'Error creating material', error: 'Database error' });
         }
         console.log('[BACKEND] Appunto created with ID:', this.lastID);
         res.status(201).json({ message: 'Appunto created successfully', id: this.lastID });
@@ -46,7 +46,10 @@ const getAppunti = (req, res) => {
     sql += ` ORDER BY a.data_pubblicazione DESC`;
 
     db.all(sql, params, (err, rows) => {
-        if (err) return res.status(500).json({ message: 'Database error' });
+        if (err) {
+            console.error('[BACKEND ERROR] getAppunti:', err);
+            return res.status(500).json({ message: 'Error fetching material' });
+        }
         res.json(rows);
     });
 };
@@ -57,7 +60,10 @@ const deleteAppunto = (req, res) => {
     // First check ownership or admin role
     const checkSql = `SELECT * FROM appunti WHERE id = ?`;
     db.get(checkSql, [id], (err, row) => {
-        if (err) return res.status(500).json({ message: 'Database error' });
+        if (err) {
+            console.error('[BACKEND ERROR] deleteAppunto (check):', err);
+            return res.status(500).json({ message: 'Database error' });
+        }
         if (!row) return res.status(404).json({ message: 'Appunto not found' });
 
         if (req.userRole !== 'admin' && row.autore_id !== req.userId) {
@@ -71,7 +77,10 @@ const deleteAppunto = (req, res) => {
         }
 
         db.run(`DELETE FROM appunti WHERE id = ?`, [id], (err) => {
-            if (err) return res.status(500).json({ message: 'Database error' });
+            if (err) {
+                console.error('[BACKEND ERROR] deleteAppunto (run):', err);
+                return res.status(500).json({ message: 'Database error' });
+            }
             res.json({ message: 'Appunto deleted successfully' });
         });
     });
@@ -79,7 +88,10 @@ const deleteAppunto = (req, res) => {
 
 const getCategories = (req, res) => {
     db.all(`SELECT * FROM categorie`, [], (err, rows) => {
-        if (err) return res.status(500).json({ message: 'Database error' });
+        if (err) {
+            console.error('[BACKEND ERROR] getCategories:', err);
+            return res.status(500).json({ message: 'Database error' });
+        }
         res.json(rows);
     });
 };

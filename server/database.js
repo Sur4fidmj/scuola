@@ -84,6 +84,21 @@ const initDb = async () => {
             nome TEXT NOT NULL UNIQUE
         )`);
 
+        // Seed default categories
+        await db.query(`
+            INSERT INTO categorie (nome)
+            VALUES 
+                ('Matematica'), 
+                ('Italiano'), 
+                ('Storia'), 
+                ('Telecomunicazioni'), 
+                ('Sistemi e Reti'), 
+                ('TPSIT'),
+                ('Informatica'),
+                ('Inglese')
+            ON CONFLICT (nome) DO NOTHING
+        `);
+
         // Appunti Table
         await db.query(`CREATE TABLE IF NOT EXISTS appunti (
             id SERIAL PRIMARY KEY,

@@ -19,18 +19,22 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-    const allowedTypes = /pdf|doc|docx|ppt|pptx/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype) ||
-        file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-        file.mimetype === 'application/msword' ||
-        file.mimetype === 'application/vnd.ms-powerpoint' ||
-        file.mimetype === 'application/pdf';
+    const allowedExtensions = ['.pdf', '.doc', '.docx', '.ppt', '.pptx'];
+    const allowedMimeTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-powerpoint',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+    ];
 
-    if (extname && mimetype) {
-        return cb(null, true);
+    const extension = path.extname(file.originalname).toLowerCase();
+    const mimetype = file.mimetype;
+
+    if (allowedExtensions.includes(extension) && allowedMimeTypes.includes(mimetype)) {
+        cb(null, true);
     } else {
-        cb(new Error('Only PDF, DOC, DOCX, PPT, and PPTX files are allowed!'));
+        cb(new Error('Invalid file type. Only PDF, DOC, DOCX, PPT, and PPTX are allowed.'));
     }
 };
 

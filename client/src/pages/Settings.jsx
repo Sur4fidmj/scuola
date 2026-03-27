@@ -1,13 +1,15 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import api from '../services/api';
-import { User, Lock, ShieldCheck, Mail, CheckCircle, XCircle, QrCode, LogOut } from 'lucide-react';
+import { User, Lock, ShieldCheck, Mail, CheckCircle, XCircle, QrCode, LogOut, Home, ChevronLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import '../styles/Settings.css';
 
 const Settings = () => {
     const { user, setUser } = useContext(AuthContext);
     const [activeTab, setActiveTab] = useState('profile');
     const [message, setMessage] = useState({ type: '', text: '' });
+    const navigate = useNavigate();
 
     // Profile State
     const [profileData, setProfileData] = useState({
@@ -100,6 +102,10 @@ const Settings = () => {
         <div className="settings-page">
             <div className="settings-container glass-card">
                 <div className="settings-sidebar">
+                    <button className="back-home-btn" onClick={() => navigate('/')}>
+                        <ChevronLeft size={20} /> Torna alla Home
+                    </button>
+                    <div className="sidebar-divider"></div>
                     <button className={activeTab === 'profile' ? 'active' : ''} onClick={() => setActiveTab('profile')}>
                         <User size={20} /> Profilo
                     </button>

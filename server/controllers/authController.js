@@ -5,7 +5,11 @@ const { db } = require('../database');
 const { sendVerificationEmail, sendPasswordChangeNotification } = require('../services/emailService');
 const speakeasy = require('speakeasy');
 
-const SECRET_KEY = process.env.JWT_SECRET || 'secret_key_needed';
+if (!process.env.JWT_SECRET) {
+    console.error('FATAL ERROR: JWT_SECRET is not defined.');
+    process.exit(1);
+}
+const SECRET_KEY = process.env.JWT_SECRET;
 
 const register = async (req, res) => {
     const { nome, cognome, email, password } = req.body;
@@ -33,7 +37,8 @@ const register = async (req, res) => {
         if (err.code === '23505') { // Postgres unique violation
             return res.status(400).json({ message: 'Email already exists' });
         }
-        res.status(500).json({ message: 'Database error', error: err.message });
+        console.error('[AUTH ERROR] Register:', err);
+        res.status(500).json({ message: 'Registration failed', error: 'Database error' });
     }
 };
 
@@ -69,7 +74,8 @@ const login = async (req, res) => {
         const token = jwt.sign({ id: user.id, role: user.ruolo, email: user.email }, SECRET_KEY, { expiresIn: '24h' });
         res.json({ token, user: { id: user.id, nome: user.nome, cognome: user.cognome, ruolo: user.ruolo, email: user.email, is_verified: user.is_verified, two_fa_enabled: user.two_fa_enabled } });
     } catch (err) {
-        res.status(500).json({ message: 'Database error', error: err.message });
+        console.error('[AUTH ERROR] Login:', err);
+        res.status(500).json({ message: 'Login failed', error: 'Database error' });
     }
 };
 
@@ -80,7 +86,8 @@ const getMe = async (req, res) => {
         if (!user) return res.status(404).json({ message: 'User not found' });
         res.json(user);
     } catch (err) {
-        res.status(500).json({ message: 'Database error', error: err.message });
+        console.error('[AUTH ERROR] getMe:', err);
+        res.status(500).json({ message: 'Internal server error', error: 'Database error' });
     }
 };
 
@@ -91,7 +98,8 @@ const verifyEmail = async (req, res) => {
         if (result.rowCount === 0) return res.status(400).json({ message: 'Invalid or expired token' });
         res.json({ message: 'Email verified successfully!' });
     } catch (err) {
-        res.status(500).json({ message: 'Database error', error: err.message });
+        console.error('[AUTH ERROR] verifyEmail:', err);
+        res.status(500).json({ message: 'Verification failed', error: 'Database error' });
     }
 };
 
@@ -111,7 +119,8 @@ const changePassword = async (req, res) => {
         sendPasswordChangeNotification(user.email).catch(console.error);
         res.json({ message: 'Password changed successfully' });
     } catch (err) {
-        res.status(500).json({ message: 'Database error', error: err.message });
+        console.error('[AUTH ERROR] changePassword:', err);
+        res.status(500).json({ message: 'Password change failed', error: 'Database error' });
     }
 };
 
@@ -139,7 +148,8 @@ const resendVerificationEmail = async (req, res) => {
 
         res.json({ message: 'Verification email sent' });
     } catch (err) {
-        res.status(500).json({ message: 'Error sending verification email', error: err.message });
+        console.error('[AUTH ERROR] resendVerificationEmail:', err);
+        res.status(500).json({ message: 'Error sending verification email', error: 'Internal error' });
     }
 };
 

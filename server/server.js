@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const { initDb } = require('./database');
 const dotenv = require('dotenv');
 
@@ -11,6 +13,33 @@ const PORT = process.env.PORT || 5000;
 
 // Normalize FRONTEND_URL (remove trailing slash if present)
 const FRONTEND_URL = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, '') : '*';
+
+// Security Headers
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+            "img-src": ["'self'", "data:", "https:"],
+            "script-src": ["'self'", "'unsafe-inline'"], // React needs some inline scripts sometimes
+        },
+    },
+}));
+
+// Rate Limiting
+const globalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per windowMs
+    message: { message: 'Too many requests from this IP, please try again after 15 minutes' }
+});
+app.use('/api/', globalLimiter);
+
+const authLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 10, // Limit each IP to 10 login/register attempts per hour
+    message: { message: 'Too many authentication attempts, please try again after an hour' }
+});
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
 
 // Middleware
 app.use(cors({
@@ -66,10 +95,17 @@ app.use((req, res, next) => {
 // Error Handler
 app.use((err, req, res, next) => {
     console.error('[SERVER ERROR]', err);
+    
     if (err instanceof require('multer').MulterError) {
-        return res.status(400).json({ message: 'File upload error', error: err.message });
+        return res.status(400).json({ message: 'File upload error', error: 'Invalid file format or size' });
     }
-    res.status(500).json({ message: 'Internal server error', error: err.message });
+
+    // Sanitize error message for client
+    const isDev = process.env.NODE_ENV === 'development';
+    res.status(500).json({ 
+        message: 'Internal server error', 
+        error: isDev ? err.message : 'An unexpected error occurred' 
+    });
 });
 
 app.listen(PORT, () => {
