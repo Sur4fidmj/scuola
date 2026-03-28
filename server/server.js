@@ -11,10 +11,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Normalize FRONTEND_URL (remove trailing slash if present)
-const FRONTEND_URL = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, '') : '*';
-
-// Security Headers
+// Security Headers (Helmet first)
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
@@ -24,11 +21,20 @@ app.use(helmet({
         },
     },
 }));
+const FRONTEND_URL = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, '') : '*';
+
+// CORS Configuration (MUST be before Rate Limiting for correct headers on 429)
+app.use(cors({
+    origin: FRONTEND_URL,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // Rate Limiting
 const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
+    max: 200, // Limit each IP to 200 requests per 15 minutes (increased for dashboard loading)
     message: { message: 'Too many requests from this IP, please try again after 15 minutes' }
 });
 app.use('/api/', globalLimiter);
@@ -42,12 +48,6 @@ app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 
 // Middleware
-app.use(cors({
-    origin: FRONTEND_URL,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
 app.use(express.json());
 app.use((req, res, next) => {
     console.log(`[DEBUG] ${req.method} ${req.url}`);

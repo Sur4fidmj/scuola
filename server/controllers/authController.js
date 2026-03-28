@@ -11,33 +11,72 @@ if (!process.env.JWT_SECRET) {
 }
 const SECRET_KEY = process.env.JWT_SECRET;
 
-const register = async (req, res) => {
-    const { nome, cognome, email, password } = req.body;
-    const ruolo = 'studente';
-    const verificationToken = crypto.randomBytes(32).toString('hex');
+const requestRegistration = async (req, res) => {
+    const { email } = req.body;
 
-    if (!nome || !cognome || !email || !password) {
-        return res.status(400).json({ message: 'All fields are required' });
+    if (!email) {
+        return res.status(400).json({ message: 'Email is required' });
     }
 
     try {
-        const hash = await bcrypt.hash(password, 10);
-        const sql = `INSERT INTO users (nome, cognome, email, password_hash, ruolo, verification_token) 
-                     VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`;
+        // Check if user already exists
+        const existingUser = await db.get(`SELECT id FROM users WHERE email = $1`, [email]);
+        if (existingUser) {
+            return res.status(400).json({ message: 'Email already registered' });
+        }
 
-        const result = await db.query(sql, [nome, cognome, email, hash, ruolo, verificationToken]);
+        // Generate a registration token (JWT) valid for 1 hour
+        const registrationToken = jwt.sign({ email, purpose: 'registration' }, SECRET_KEY, { expiresIn: '1h' });
+        const registrationLink = `${process.env.FRONTEND_URL}/register-complete?token=${registrationToken}`;
+        
+        await sendVerificationEmail(email, registrationLink);
+        res.json({ message: 'Registration link sent! Please check your email.' });
+    } catch (err) {
+        console.error('[AUTH ERROR] requestRegistration:', err);
+        res.status(500).json({ message: 'Error sending registration email', error: 'Internal error' });
+    }
+};
+
+const register = async (req, res) => {
+    const { token, nome, cognome, password } = req.body;
+    const ruolo = 'studente';
+
+    if (!token || !nome || !cognome || !password) {
+        return res.status(400).json({ message: 'All fields and token are required' });
+    }
+
+    try {
+        // Verify the registration token
+        const decoded = jwt.verify(token, SECRET_KEY);
+        if (decoded.purpose !== 'registration') {
+            return res.status(400).json({ message: 'Invalid token purpose' });
+        }
+
+        const email = decoded.email;
+
+        // Double check if user exists (vulnerability prevention)
+        const existingUser = await db.get(`SELECT id FROM users WHERE email = $1`, [email]);
+        if (existingUser) {
+            return res.status(400).json({ message: 'Email already registered' });
+        }
+
+        const hash = await bcrypt.hash(password, 10);
+        // User was verified via email token, so we can set is_verified to TRUE immediately
+        const sql = `INSERT INTO users (nome, cognome, email, password_hash, ruolo, is_verified) 
+                     VALUES ($1, $2, $3, $4, $5, TRUE) RETURNING id`;
+
+        const result = await db.query(sql, [nome, cognome, email, hash, ruolo]);
         const userId = result.rows[0].id;
 
-        // Send verification email (async)
-        const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
-        sendVerificationEmail(email, verificationLink).catch(console.error);
-
-        res.status(201).json({ message: 'User registered successfully. Check your email for verification.', userId });
+        res.status(201).json({ message: 'Account created successfully! You can now login.', userId });
     } catch (err) {
-        if (err.code === '23505') { // Postgres unique violation
-            return res.status(400).json({ message: 'Email already exists' });
+        if (err.name === 'TokenExpiredError') {
+            return res.status(400).json({ message: 'Registration link expired. Please start over.' });
         }
-        console.error('[AUTH ERROR] Register:', err);
+        if (err.name === 'JsonWebTokenError') {
+            return res.status(400).json({ message: 'Invalid registration link.' });
+        }
+        console.error('[AUTH ERROR] Register Complete:', err);
         res.status(500).json({ message: 'Registration failed', error: 'Database error' });
     }
 };
@@ -50,6 +89,14 @@ const login = async (req, res) => {
         const user = await db.get(sql, [email]);
 
         if (!user) return res.status(401).json({ message: 'Invalid credentials' });
+
+        // IMPORTANT: Prevent unverified users from logging in (for existing users)
+        if (!user.is_verified) {
+            return res.status(401).json({ 
+                message: 'Email not verified. Please check your inbox.',
+                unverified: true 
+            });
+        }
 
         const result = await bcrypt.compare(password, user.password_hash);
         if (!result) return res.status(401).json({ message: 'Invalid credentials' });
@@ -153,4 +200,4 @@ const resendVerificationEmail = async (req, res) => {
     }
 };
 
-module.exports = { register, login, getMe, verifyEmail, changePassword, resendVerificationEmail };
+module.exports = { requestRegistration, register, login, getMe, verifyEmail, changePassword, resendVerificationEmail };

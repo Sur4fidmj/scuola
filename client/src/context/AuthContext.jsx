@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 
 export const AuthContext = createContext();
 
@@ -10,8 +10,7 @@ export const AuthProvider = ({ children }) => {
     useEffect(() => {
         const token = localStorage.getItem('token');
         if (token) {
-            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-            axios.get('https://scuola-backend.onrender.com/api/auth/me')
+            api.get('/auth/me')
                 .then(res => {
                     setUser(res.data);
                 })
@@ -26,14 +25,17 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     const login = async (email, password) => {
-        const res = await axios.post('https://scuola-backend.onrender.com/api/auth/login', { email, password });
+        const res = await api.post('/auth/login', { email, password });
         localStorage.setItem('token', res.data.token);
-        axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
         setUser(res.data.user);
     };
 
     const register = async (userData) => {
-        await axios.post('https://scuola-backend.onrender.com/api/auth/register', userData);
+        await api.post('/auth/register', userData);
+    };
+
+    const requestRegister = async (email) => {
+        await api.post('/auth/request-registration', { email });
     };
 
     const logout = () => {
@@ -43,7 +45,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+        <AuthContext.Provider value={{ user, login, register, requestRegister, logout, loading }}>
             {children}
         </AuthContext.Provider>
     );

@@ -4,53 +4,61 @@ import { AuthContext } from '../context/AuthContext';
 import '../styles/Auth.css';
 
 const Register = () => {
-    const [formData, setFormData] = useState({
-        nome: '', cognome: '', email: '', password: '', ruolo: 'studente'
-    });
+    const [email, setEmail] = useState('');
+    const [status, setStatus] = useState('idle'); // idle, loading, success
     const [error, setError] = useState('');
-    const { register } = useContext(AuthContext);
-    const navigate = useNavigate();
-
-    const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
+    const { requestRegister } = useContext(AuthContext);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setError('');
+        setStatus('loading');
         try {
-            await register(formData);
-            navigate('/login');
+            await requestRegister(email);
+            setStatus('success');
         } catch (err) {
-            setError(err.response?.data?.message || 'Registration failed');
+            setStatus('idle');
+            setError(err.response?.data?.message || 'Errore durante l\'invio del link');
         }
     };
+
+    if (status === 'success') {
+        return (
+            <div className="auth-container">
+                <div className="auth-card success-card">
+                    <div className="success-icon">📧</div>
+                    <h2>Controlla la tua Email</h2>
+                    <p>Abbiamo inviato un link di registrazione a <strong>{email}</strong>.</p>
+                    <p>Clicca sul link contenuto nell'email per completare la creazione del tuo account.</p>
+                    <div className="auth-footer">
+                        <Link to="/login">Torna al Login</Link>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="auth-container">
             <div className="auth-card">
                 <h2>Crea Account</h2>
-                <p>Unisciti alla nostra piattaforma</p>
+                <p>Inserisci la tua email per iniziare la registrazione</p>
                 {error && <div className="error-msg">{error}</div>}
                 <form onSubmit={handleSubmit}>
-                    <div className="form-row">
-                        <div className="form-group">
-                            <label>Nome</label>
-                            <input name="nome" value={formData.nome} onChange={handleChange} required />
-                        </div>
-                        <div className="form-group">
-                            <label>Cognome</label>
-                            <input name="cognome" value={formData.cognome} onChange={handleChange} required />
-                        </div>
-                    </div>
                     <div className="form-group">
-                        <label>Email</label>
-                        <input type="email" name="email" value={formData.email} onChange={handleChange} required />
+                        <label>Email Istituzionale</label>
+                        <input 
+                            type="email" 
+                            name="email" 
+                            value={email} 
+                            onChange={(e) => setEmail(e.target.value)} 
+                            placeholder="esempio@scuola.it"
+                            required 
+                        />
                     </div>
-                    <div className="form-group">
-                        <label>Password</label>
-                        <input type="password" name="password" value={formData.password} onChange={handleChange} required />
-                    </div>
-                    <button type="submit" className="auth-btn">Registrati</button>
+                    <button type="submit" className="auth-btn" disabled={status === 'loading'}>
+                        {status === 'loading' ? 'Invio in corso...' : 'Invia Link di Registrazione'}
+                    </button>
                 </form>
                 <div className="auth-footer">
                     Hai già un account? <Link to="/login">Accedi</Link>

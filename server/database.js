@@ -51,7 +51,10 @@ const db = {
         if (typeof callback === 'function') {
             pool.query(q, params)
                 .then(res => {
-                    const ctx = { lastID: res.rows && res.rows.length ? res.rows[0].id : this.lastID };
+                    const ctx = { 
+                        lastID: res.rows && res.rows.length ? res.rows[0].id : this.lastID,
+                        changes: res.rowCount // Emulate sqlite changes
+                    };
                     callback.call(ctx, null);
                 })
                 .catch(err => callback.call(this, err));

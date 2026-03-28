@@ -14,7 +14,8 @@ const setup2FA = async (req, res) => {
             res.json({ qrCode: qrCodeUrl, secret: secret.base32 });
         });
     } catch (err) {
-        res.status(500).json({ message: 'Error setting up 2FA', error: err.message });
+        console.error('[2FA ERROR] setup2FA:', err);
+        res.status(500).json({ message: 'Error setting up 2FA', error: 'Database error' });
     }
 };
 
@@ -22,7 +23,13 @@ const verifyAndEnable2FA = (req, res) => {
     const { token } = req.body;
 
     db.get(`SELECT two_fa_secret FROM users WHERE id = ?`, [req.userId], (err, user) => {
-        if (err || !user) return res.status(500).json({ message: 'User not found' });
+        if (err) {
+            console.error('[2FA ERROR] verifyAndEnable2FA (get):', err);
+            return res.status(500).json({ message: 'Database error' });
+        }
+        if (!user || !user.two_fa_secret) {
+            return res.status(404).json({ message: 'User or 2FA secret not found' });
+        }
 
         const verified = speakeasy.totp.verify({
             secret: user.two_fa_secret,
@@ -31,8 +38,12 @@ const verifyAndEnable2FA = (req, res) => {
         });
 
         if (verified) {
-            db.run(`UPDATE users SET two_fa_enabled = 1 WHERE id = ?`, [req.userId], (err) => {
-                if (err) return res.status(500).json({ message: 'Database error' });
+            // Postgres requires TRUE for boolean columns
+            db.run(`UPDATE users SET two_fa_enabled = TRUE WHERE id = ?`, [req.userId], (err) => {
+                if (err) {
+                    console.error('[2FA ERROR] verifyAndEnable2FA (update):', err);
+                    return res.status(500).json({ message: 'Database error' });
+                }
                 res.json({ message: '2FA enabled successfully' });
             });
         } else {
@@ -42,8 +53,12 @@ const verifyAndEnable2FA = (req, res) => {
 };
 
 const disable2FA = (req, res) => {
-    db.run(`UPDATE users SET two_fa_enabled = 0, two_fa_secret = NULL WHERE id = ?`, [req.userId], (err) => {
-        if (err) return res.status(500).json({ message: 'Database error' });
+    // Postgres requires FALSE for boolean columns
+    db.run(`UPDATE users SET two_fa_enabled = FALSE, two_fa_secret = NULL WHERE id = ?`, [req.userId], (err) => {
+        if (err) {
+            console.error('[2FA ERROR] disable2FA:', err);
+            return res.status(500).json({ message: 'Database error' });
+        }
         res.json({ message: '2FA disabled successfully' });
     });
 };

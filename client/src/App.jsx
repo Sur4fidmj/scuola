@@ -10,6 +10,7 @@ import Evaluations from './pages/Evaluations';
 import AdminDashboard from './pages/AdminDashboard';
 import Settings from './pages/Settings';
 import VerifyEmail from './pages/VerifyEmail';
+import RegisterComplete from './pages/RegisterComplete';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -20,6 +21,7 @@ function App() {
                 <Routes>
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
+                    <Route path="/register-complete" element={<RegisterComplete />} />
                     <Route path="/verify-email" element={<VerifyEmail />} />
 
                     {/* Protected Routes */}

@@ -2,7 +2,10 @@ const { db } = require('../database');
 
 const getAllUsers = (req, res) => {
     db.all(`SELECT id, nome, cognome, email, ruolo, data_creazione FROM users`, [], (err, rows) => {
-        if (err) return res.status(500).json({ message: 'Database error' });
+        if (err) {
+            console.error('[ADMIN ERROR] getAllUsers:', err);
+            return res.status(500).json({ message: 'Database error' });
+        }
         res.json(rows);
     });
 };
@@ -16,7 +19,10 @@ const updateUserRole = (req, res) => {
     }
 
     db.run(`UPDATE users SET ruolo = ? WHERE id = ?`, [ruolo, id], function (err) {
-        if (err) return res.status(500).json({ message: 'Database error' });
+        if (err) {
+            console.error('[ADMIN ERROR] updateUserRole:', err);
+            return res.status(500).json({ message: 'Database error' });
+        }
         if (this.changes === 0) return res.status(404).json({ message: 'User not found' });
         res.json({ message: 'User role updated' });
     });
@@ -30,7 +36,10 @@ const deleteUser = (req, res) => {
     }
 
     db.run(`DELETE FROM users WHERE id = ?`, [id], function (err) {
-        if (err) return res.status(500).json({ message: 'Database error' });
+        if (err) {
+            console.error('[ADMIN ERROR] deleteUser:', err);
+            return res.status(500).json({ message: 'Database error' });
+        }
         if (this.changes === 0) return res.status(404).json({ message: 'User not found' });
         res.json({ message: 'User deleted' });
     });
@@ -51,7 +60,10 @@ const updateUserProfile = (req, res) => {
 
     const executeUpdate = () => {
         db.run(`UPDATE users SET nome = ?, cognome = ?, email = ? WHERE id = ?`, [nome, cognome, email, targetId], function (err) {
-            if (err) return res.status(500).json({ message: 'Database error' });
+            if (err) {
+                console.error('[ADMIN ERROR] executeUpdate (internal):', err);
+                return res.status(500).json({ message: 'Database error' });
+            }
             if (this.changes === 0) return res.status(404).json({ message: 'User not found' });
             res.json({ message: 'User profile updated' });
         });
@@ -59,7 +71,11 @@ const updateUserProfile = (req, res) => {
 
     if (req.userRole === 'professore' && targetId !== req.userId) {
         db.get(`SELECT ruolo FROM users WHERE id = ?`, [targetId], (err, targetUser) => {
-            if (err || !targetUser) return res.status(404).json({ message: 'User not found' });
+            if (err) {
+                console.error('[ADMIN ERROR] updateUserProfile (prof-check):', err);
+                return res.status(500).json({ message: 'Database error' });
+            }
+            if (!targetUser) return res.status(404).json({ message: 'User not found' });
             if (targetUser.ruolo !== 'studente') {
                 return res.status(403).json({ message: 'Professors can only update student profiles' });
             }

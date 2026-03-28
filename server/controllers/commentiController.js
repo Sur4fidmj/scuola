@@ -10,7 +10,10 @@ const getCommentiByAppunto = (req, res) => {
                  ORDER BY c.data_creazione ASC`;
 
     db.all(sql, [id], (err, rows) => {
-        if (err) return res.status(500).json({ message: 'Database error', error: err.message });
+        if (err) {
+            console.error('[COMMENTI ERROR] getCommentiByAppunto:', err);
+            return res.status(500).json({ message: 'Database error' });
+        }
         res.json(rows);
     });
 };
@@ -25,7 +28,10 @@ const addCommento = (req, res) => {
 
     const sql = `INSERT INTO commenti (appunto_id, utente_id, testo) VALUES (?, ?, ?)`;
     db.run(sql, [id, req.userId, testo], function (err) {
-        if (err) return res.status(500).json({ message: 'Database error', error: err.message });
+        if (err) {
+            console.error('[COMMENTI ERROR] addCommento:', err);
+            return res.status(500).json({ message: 'Database error' });
+        }
         res.status(201).json({
             message: 'Commento aggiunto',
             id: this.lastID,
@@ -39,7 +45,10 @@ const deleteCommento = (req, res) => {
 
     const checkSql = `SELECT * FROM commenti WHERE id = ?`;
     db.get(checkSql, [commentId], (err, row) => {
-        if (err) return res.status(500).json({ message: 'Database error' });
+        if (err) {
+            console.error('[COMMENTI ERROR] deleteCommento (check):', err);
+            return res.status(500).json({ message: 'Database error' });
+        }
         if (!row) return res.status(404).json({ message: 'Comment not found' });
 
         if (req.userRole !== 'admin' && row.utente_id !== req.userId) {
@@ -47,7 +56,10 @@ const deleteCommento = (req, res) => {
         }
 
         db.run(`DELETE FROM commenti WHERE id = ?`, [commentId], function (err) {
-            if (err) return res.status(500).json({ message: 'Database error' });
+            if (err) {
+                console.error('[COMMENTI ERROR] deleteCommento (run):', err);
+                return res.status(500).json({ message: 'Database error' });
+            }
             res.json({ message: 'Commento deleted' });
         });
     });
