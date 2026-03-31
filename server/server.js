@@ -11,6 +11,9 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust Proxy (Required if behind NGINX, Render, Heroku, etc. for Rate Limiter to get real IP)
+app.set('trust proxy', 1);
+
 // Security Headers (Helmet first)
 app.use(helmet({
     contentSecurityPolicy: {
@@ -34,14 +37,14 @@ app.use(cors({
 // Rate Limiting
 const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 200, // Limit each IP to 200 requests per 15 minutes (increased for dashboard loading)
+    max: 1000, // Limit each IP to 1000 requests per 15 minutes (increased for dashboard loading)
     message: { message: 'Too many requests from this IP, please try again after 15 minutes' }
 });
 app.use('/api/', globalLimiter);
 
 const authLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour
-    max: 10, // Limit each IP to 10 login/register attempts per hour
+    max: 100, // Limit each IP to 100 login/register attempts per hour (School setting)
     message: { message: 'Too many authentication attempts, please try again after an hour' }
 });
 app.use('/api/auth/login', authLimiter);

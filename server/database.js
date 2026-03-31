@@ -12,7 +12,10 @@ const pool = new Pool({
     connectionString: DATABASE_URL,
     ssl: {
         rejectUnauthorized: false // Required for Neon and many hosted PG instances
-    }
+    },
+    max: 20, // Max concurrent connections to Neon
+    idleTimeoutMillis: 30000, // Close idle connections after 30 seconds
+    connectionTimeoutMillis: 5000 // Return an error after 5 seconds if connection cannot be established
 });
 
 const convertQuery = (text) => {
