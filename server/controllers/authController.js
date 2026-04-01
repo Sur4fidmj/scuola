@@ -107,10 +107,12 @@ const login = async (req, res) => {
                 return res.status(206).json({ message: '2FA required', userId: user.id });
             }
 
+            const cleanToken = twoFAToken ? twoFAToken.toString().replace(/\s/g, '') : '';
             const verified = speakeasy.totp.verify({
                 secret: user.two_fa_secret,
                 encoding: 'base32',
-                token: twoFAToken
+                token: cleanToken,
+                window: 2 // Allow +/- 60 seconds time drift
             });
 
             if (!verified) {

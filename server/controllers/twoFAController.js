@@ -31,10 +31,12 @@ const verifyAndEnable2FA = (req, res) => {
             return res.status(404).json({ message: 'User or 2FA secret not found' });
         }
 
+        const cleanToken = token ? token.toString().replace(/\s/g, '') : '';
         const verified = speakeasy.totp.verify({
             secret: user.two_fa_secret,
             encoding: 'base32',
-            token: token
+            token: cleanToken,
+            window: 2 // Allow +/- 60 seconds time drift
         });
 
         if (verified) {

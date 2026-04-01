@@ -5,6 +5,9 @@ import { AuthContext } from '../context/AuthContext';
 import { Search, Download, Trash2, FileText, Filter, Eye, MessageSquare, Send, X } from 'lucide-react';
 import '../styles/Appunti.css';
 
+const API_URL = import.meta.env.VITE_API_URL || 'https://scuola-backend.onrender.com/api';
+const UPLOADS_URL = API_URL.replace('/api', '/uploads');
+
 const Appunti = () => {
     const { user } = useContext(AuthContext);
     const [appunti, setAppunti] = useState([]);
@@ -47,6 +50,19 @@ const Appunti = () => {
     };
 
     const handleOpenPreview = async (item) => {
+        try {
+            const fileUrl = `${UPLOADS_URL}/${item.file_path}`;
+            const res = await fetch(fileUrl, { method: 'HEAD' });
+            if (!res.ok) {
+                alert('Errore: Il file non è più disponibile sul server. La pagina verrà ricaricata.');
+                window.location.reload();
+                return;
+            }
+        } catch (error) {
+            console.warn('Impossibile verificare preventivamente l\'esistenza del file:', error);
+            // Se c'è un errore di rete o CORS, proviamo comunque ad aprirlo ed eviteremo di bloccarlo.
+        }
+
         setSelectedItem(item);
         setComments([]);
         setLoadingComments(true);
@@ -141,7 +157,7 @@ const Appunti = () => {
                                     <button onClick={() => handleOpenPreview(item)} className="btn-icon preview">
                                         <Eye size={18} /> Anteprima
                                     </button>
-                                    <a target="_blank" href={`https://king-hosting.it/uploads/${item.file_path}`} className="btn-icon download" rel="noreferrer">
+                                    <a target="_blank" href={`${UPLOADS_URL}/${item.file_path}`} className="btn-icon download" rel="noreferrer">
                                         <Download size={18} /> Scarica
                                     </a>
                                     {(user.ruolo === 'admin' || user.id === item.autore_id) && (
@@ -169,9 +185,13 @@ const Appunti = () => {
                                 <h2>{selectedItem.titolo}</h2>
                                 <div className="iframe-wrapper">
                                     <iframe
-                                        src={`https://king-hosting.it/uploads/${selectedItem.file_path}`}
+                                        src={`${UPLOADS_URL}/${selectedItem.file_path}`}
                                         title="Document Preview"
                                         frameBorder="0"
+                                        onError={(e) => {
+                                            console.error('Errore caricamento iframe', e);
+                                            window.location.reload();
+                                        }}
                                     ></iframe>
                                 </div>
                             </div>
